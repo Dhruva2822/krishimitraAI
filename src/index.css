@@ -1,0 +1,61 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    -webkit-tap-highlight-color: transparent;
+    -webkit-touch-callout: none;
+    scroll-behavior: smooth;
+    overscroll-behavior-y: contain;
+  }
+
+  body {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    touch-action: manipulation;
+  }
+
+  /* Reduce motion for users who prefer it AND for mobile performance */
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+
+  /* Mobile performance: limit frame-heavy effects on small screens */
+  @media (max-width: 768px) {
+    * {
+      -webkit-backface-visibility: hidden;
+      backface-visibility: hidden;
+    }
+
+    /* Simplify shadows on mobile for better rendering performance */
+    .shadow-lg, .shadow-md, .shadow-2xl {
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.06) !important;
+    }
+
+    /* Reduce blur effects on mobile */
+    .backdrop-blur-sm {
+      backdrop-filter: none !important;
+      -webkit-backdrop-filter: none !important;
+      background-color: rgba(0, 0, 0, 0.6) !important;
+    }
+  }
+}
+
+@layer utilities {
+  /* GPU-accelerated scrolling for mobile */
+  .scroll-gpu {
+    transform: translateZ(0);
+    will-change: transform;
+  }
+
+  /* Touch-friendly tap targets (minimum 44px) */
+  .touch-target {
+    min-height: 44px;
+    min-width: 44px;
+  }
+}
