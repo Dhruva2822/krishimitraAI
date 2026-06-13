@@ -1,12 +1,13 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { NavLink } from 'react-router-dom';
-import { LayoutDashboard, Scan, FlaskConical, Menu, X, Sprout } from 'lucide-react';
+import { LayoutDashboard, Scan, FlaskConical, Menu, X, Sprout, Wheat } from 'lucide-react';
 
 const navItems = [
   { path: '/', label: 'Dashboard', icon: <LayoutDashboard className="w-5 h-5" /> },
   { path: '/disease', label: 'Disease Detection', icon: <Scan className="w-5 h-5" /> },
   { path: '/soil', label: 'Soil Analysis', icon: <FlaskConical className="w-5 h-5" /> },
+  { path: '/crop', label: 'Crop Recommend', icon: <Wheat className="w-5 h-5" /> },
 ];
 
 export default function Navigation() {

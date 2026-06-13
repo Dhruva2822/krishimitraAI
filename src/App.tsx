@@ -3,6 +3,7 @@ import Navigation from './components/Navigation';
 import Dashboard from './modules/Dashboard';
 import DiseaseDetection from './modules/DiseaseDetection';
 import SoilAnalyzer from './modules/SoilAnalyzer';
+import CropRecommendation from './modules/CropRecommendation';
 
 function App() {
   return (
@@ -14,6 +15,7 @@ function App() {
             <Route path="/" element={<Dashboard />} />
             <Route path="/disease" element={<DiseaseDetection />} />
             <Route path="/soil" element={<SoilAnalyzer />} />
+            <Route path="/crop" element={<CropRecommendation />} />
           </Routes>
         </main>
       </div>

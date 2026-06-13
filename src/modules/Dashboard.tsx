@@ -27,17 +27,56 @@ export default function Dashboard() {
 
   useEffect(() => {
     const fetchAll = async () => {
-      const [parcelsRes, yieldsRes, diseasesRes, soilsRes] = await Promise.all([
-        supabase.from('farm_parcels').select('*'),
-        supabase.from('yield_records').select('*'),
-        supabase.from('crop_diseases').select('*').order('detected_at', { ascending: false }).limit(10),
-        supabase.from('soil_reports').select('*').order('analyzed_at', { ascending: false }).limit(10),
-      ]);
+      let parcels: any[] = [];
+      let yields: any[] = [];
+      let diseases: any[] = [];
+      let soils: any[] = [];
+
+      const isSupabaseConfigured =
+        import.meta.env.VITE_SUPABASE_URL &&
+        !import.meta.env.VITE_SUPABASE_URL.includes('placeholder') &&
+        import.meta.env.VITE_SUPABASE_ANON_KEY &&
+        import.meta.env.VITE_SUPABASE_ANON_KEY !== 'placeholder';
+
+      if (isSupabaseConfigured) {
+        try {
+          const [parcelsRes, yieldsRes, diseasesRes, soilsRes] = await Promise.all([
+            supabase.from('farm_parcels').select('*'),
+            supabase.from('yield_records').select('*'),
+            supabase.from('crop_diseases').select('*').order('detected_at', { ascending: false }).limit(10),
+            supabase.from('soil_reports').select('*').order('analyzed_at', { ascending: false }).limit(10),
+          ]);
+          parcels = parcelsRes.data || [];
+          yields = yieldsRes.data || [];
+          diseases = diseasesRes.data || [];
+          soils = soilsRes.data || [];
+        } catch (e) {
+          console.warn("Supabase fetch failed, loading local/mock data instead", e);
+        }
+      }
+
+      // Add local storage fallback
+      const localSoils = JSON.parse(localStorage.getItem('soil_reports') || '[]');
+      const localDiseases = JSON.parse(localStorage.getItem('crop_diseases') || '[]');
+
+      const mockParcels = [
+        { id: '1', name: 'North Field', crop_type: 'Wheat', area_hectares: 12.5 },
+        { id: '2', name: 'East Field', crop_type: 'Rice', area_hectares: 8.2 },
+        { id: '3', name: 'Hillside', crop_type: 'Tomato', area_hectares: 4.5 },
+        { id: '4', name: 'Valley Farm', crop_type: 'Soybean', area_hectares: 15.0 },
+      ];
+      const mockYields = [
+        { id: '1', parcel_id: '1', year: 2024, season: 'Rabi', yield_tons: 45.2, rainfall_mm: 650 },
+        { id: '2', parcel_id: '2', year: 2024, season: 'Kharif', yield_tons: 32.8, rainfall_mm: 1200 },
+        { id: '3', parcel_id: '3', year: 2024, season: 'Zaid', yield_tons: 15.4, rainfall_mm: 300 },
+        { id: '4', parcel_id: '4', year: 2024, season: 'Kharif', yield_tons: 50.1, rainfall_mm: 1100 },
+      ];
+
       setData({
-        parcels: parcelsRes.data || [],
-        yields: yieldsRes.data || [],
-        diseases: diseasesRes.data || [],
-        soils: soilsRes.data || [],
+        parcels: parcels.length > 0 ? parcels : mockParcels,
+        yields: yields.length > 0 ? yields : mockYields,
+        diseases: [...diseases, ...localDiseases].slice(0, 10),
+        soils: [...soils, ...localSoils].slice(0, 10),
       });
       setLoading(false);
     };
@@ -59,7 +98,7 @@ export default function Dashboard() {
     acc[y.year] = (acc[y.year] || 0) + y.yield_tons;
     return acc;
   }, {} as Record<number, number>);
-  const lineData = Object.entries(yieldByYear).map(([year, yield_tons]) => ({ year: Number(year), yield_tons })).sort((a, b) => a.year - b.year);
+  const lineData = Object.entries(yieldByYear).map(([year, yield_tons]) => ({ period: String(year), yield_tons })).sort((a, b) => a.period.localeCompare(b.period));
 
   const yieldByParcel = data.parcels.map(p => {
     const parcelYields = data.yields.filter(y => y.parcel_id === p.id);
@@ -139,7 +178,7 @@ export default function Dashboard() {
                     </linearGradient>
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
-                  <XAxis dataKey={trendData.length > 0 ? 'period' : 'year'} stroke="#9ca3af" fontSize={10} />
+                  <XAxis dataKey="period" stroke="#9ca3af" fontSize={10} />
                   <YAxis stroke="#9ca3af" fontSize={10} />
                   <Tooltip contentStyle={{ borderRadius: '12px', border: '1px solid #e5e7eb', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)' }} />
                   <Area type="monotone" dataKey="yield_tons" stroke="#3b82f6" strokeWidth={2} fill="url(#yieldGradient)" />
@@ -272,6 +311,7 @@ export default function Dashboard() {
             <div className="flex flex-wrap gap-2 sm:gap-3">
               <a href="/disease" className="px-3 py-2 sm:px-5 sm:py-3 bg-white/20 rounded-lg sm:rounded-xl text-sm font-medium hover:bg-white/30 transition-colors flex items-center gap-1.5 sm:gap-2"><Leaf className="w-4 h-4 sm:w-5 sm:h-5" /> Disease Check</a>
               <a href="/soil" className="px-3 py-2 sm:px-5 sm:py-3 bg-white/20 rounded-lg sm:rounded-xl text-sm font-medium hover:bg-white/30 transition-colors flex items-center gap-1.5 sm:gap-2"><Droplets className="w-4 h-4 sm:w-5 sm:h-5" /> Soil Analysis</a>
+              <a href="/crop" className="px-3 py-2 sm:px-5 sm:py-3 bg-white/20 rounded-lg sm:rounded-xl text-sm font-medium hover:bg-white/30 transition-colors flex items-center gap-1.5 sm:gap-2"><Wheat className="w-4 h-4 sm:w-5 sm:h-5" /> Crop Recommend</a>
             </div>
           </div>
         </div>

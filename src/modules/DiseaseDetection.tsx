@@ -6,6 +6,8 @@ import {
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { type DiseaseDetectionResult, type DiseaseKnowledge } from '../lib/types';
+import { isLeafImage } from '../lib/leafValidation';
+
 
 const DISEASE_DATABASE: DiseaseKnowledge[] = [
   { id: '1', name: 'Leaf Blight', crop_affected: 'Rice', symptoms: 'Brown spots with yellow halos on leaves, starting from tips', causes: 'Fungal infection (Helminthosporium oryzae)', treatment: 'Apply Mancozeb 75% WP @ 2.5g/L water or Tricyclazole 75% WP @ 1g/L', prevention: 'Use resistant varieties, avoid excessive nitrogen, maintain proper spacing', image_url: null },
@@ -22,185 +24,15 @@ const DISEASE_DATABASE: DiseaseKnowledge[] = [
   { id: '12', name: 'Healthy Plant', crop_affected: 'General', symptoms: 'Uniform green color, well-formed leaves, no visible damage', causes: 'N/A', treatment: 'Continue standard care practices', prevention: 'Regular monitoring, balanced nutrition, proper irrigation', image_url: null },
 ];
 
-function isLeafImage(imageData: ImageData): { isLeaf: boolean; reason: string } {
-  const data = imageData.data;
-  const totalPixels = data.length / 4;
-  let greenPixels = 0;
-  let totalR = 0, totalG = 0, totalB = 0;
-  let brightPixels = 0;
-  let darkPixels = 0;
-  let leafGreenPixels = 0;
-  let yellowGreenPixels = 0;
-  let darkGreenPixels = 0;
-  let lightGreenPixels = 0;
-  let greenVariance = 0;
-  let edgeLikePixels = 0;
-  let uniformGreenRegions = 0;
-  let lastGreenVal = -1;
-  let greenRunLength = 0;
-  let maxGreenRun = 0;
-
-  for (let i = 0; i < data.length; i += 4) {
-    const r = data[i], g = data[i + 1], b = data[i + 2];
-    totalR += r; totalG += g; totalB += b;
-
-    const brightness = (r + g + b) / 3;
-    if (brightness > 200) brightPixels++;
-    if (brightness < 40) darkPixels++;
-
-    // Broad green detection
-    if (g > 70 && g > r * 0.85 && g > b * 0.85) {
-      greenPixels++;
-    }
-
-    // Leaf-specific green shades: natural leaves show characteristic green tones
-    // Dark green (healthy mature leaf)
-    if (g > 50 && g < 160 && g > r * 1.0 && g > b * 1.1 && r < 120 && b < 100) {
-      darkGreenPixels++;
-    }
-    // Medium-bright green (young/healthy leaf)
-    if (g > 90 && g < 200 && g > r * 1.05 && g > b * 1.15 && r > 40 && r < 160) {
-      leafGreenPixels++;
-    }
-    // Light green / yellowish green (new growth or slight stress)
-    if (g > 120 && g < 230 && r > 80 && r < 180 && b < 120 && g > r * 0.85) {
-      lightGreenPixels++;
-    }
-    // Yellow-green (early disease or autumn)
-    if (g > 100 && r > 120 && r < 220 && g > r * 0.7 && g > b * 1.3 && b < 100) {
-      yellowGreenPixels++;
-    }
-
-    // Detect color variation within green areas (leaves have natural variation)
-    if (g > r * 0.85 && g > b * 0.85 && g > 60) {
-      const localVar = Math.abs(g - lastGreenVal);
-      greenVariance += localVar;
-      if (lastGreenVal >= 0 && Math.abs(g - lastGreenVal) > 8) {
-        edgeLikePixels++;
-      }
-
-      // Track run lengths of green for uniformity detection
-      if (Math.abs(g - lastGreenVal) < 10) {
-        greenRunLength++;
-        maxGreenRun = Math.max(maxGreenRun, greenRunLength);
-      } else {
-        greenRunLength = 1;
-      }
-      lastGreenVal = g;
-    } else {
-      lastGreenVal = -1;
-      greenRunLength = 0;
-    }
-  }
-
-  const avgG = totalG / totalPixels;
-  const avgR = totalR / totalPixels;
-  const avgB = totalB / totalPixels;
-  const greenRatio = greenPixels / totalPixels;
-  const brightRatio = brightPixels / totalPixels;
-  const darkRatio = darkPixels / totalPixels;
-  const darkGreenRatio = darkGreenPixels / totalPixels;
-  const leafGreenRatio = leafGreenPixels / totalPixels;
-  const lightGreenRatio = lightGreenPixels / totalPixels;
-  const yellowGreenRatio = yellowGreenPixels / totalPixels;
-  const naturalGreenVariety = (darkGreenPixels > 0 ? 1 : 0) + (leafGreenPixels > totalPixels * 0.05 ? 1 : 0) + (lightGreenPixels > 0 ? 1 : 0) + (yellowGreenPixels > 0 ? 1 : 0);
-  const avgGreenVariance = greenPixels > 0 ? greenVariance / greenPixels : 0;
-  const edgeRatio = edgeLikePixels / totalPixels;
-  const maxRunRatio = maxGreenRun / totalPixels;
-
-  // 1. Sky/water/landscape - blue dominant
-  if (avgB > avgG * 0.95 && avgB > avgR * 0.95 && greenRatio < 0.25) {
-    return { isLeaf: false, reason: 'PLEASE UPLOAD LEAF IMAGES ONLY' };
-  }
-
-  // 2. Paper/screen/document - mostly white/very bright
-  if (brightRatio > 0.6 && greenRatio < 0.1) {
-    return { isLeaf: false, reason: 'PLEASE UPLOAD LEAF IMAGES ONLY' };
-  }
-
-  // 3. Low-light/night - mostly dark
-  if (darkRatio > 0.5 && greenRatio < 0.15) {
-    return { isLeaf: false, reason: 'PLEASE UPLOAD LEAF IMAGES ONLY' };
-  }
-
-  // 4. Skin/face - warm tones with little green
-  if (avgR > avgG + 20 && avgG > avgB + 10 && greenRatio < 0.25) {
-    return { isLeaf: false, reason: 'PLEASE UPLOAD LEAF IMAGES ONLY' };
-  }
-
-  // 5. Objects/food - red/orange dominant
-  if (avgR > avgG + 30 && avgG > avgB + 10 && greenRatio < 0.2) {
-    return { isLeaf: false, reason: 'PLEASE UPLOAD LEAF IMAGES ONLY' };
-  }
-
-  // 6. Grayscale/sepia - no green
-  const colorRange = Math.max(avgR, avgG, avgB) - Math.min(avgR, avgG, avgB);
-  if (colorRange < 15 && greenRatio < 0.15) {
-    return { isLeaf: false, reason: 'PLEASE UPLOAD LEAF IMAGES ONLY' };
-  }
-
-  // 7. Strict green ratio - leaves must dominate the image
-  if (greenRatio < 0.30) {
-    return { isLeaf: false, reason: 'PLEASE UPLOAD LEAF IMAGES ONLY' };
-  }
-
-  // 8. Green must be the clearly dominant channel
-  if (avgG < avgR * 0.95 || avgG < avgB * 0.9) {
-    return { isLeaf: false, reason: 'PLEASE UPLOAD LEAF IMAGES ONLY' };
-  }
-
-  // 9. Uniform green surfaces (walls, shirts, objects) - too little color variation
-  // Real leaves have natural veining, shadows, and color gradients
-  if (avgGreenVariance < 3 && greenRatio > 0.5) {
-    return { isLeaf: false, reason: 'PLEASE UPLOAD LEAF IMAGES ONLY' };
-  }
-
-  // 10. Too-uniform green regions (solid green objects like paint/walls)
-  if (maxRunRatio > 0.15 && avgGreenVariance < 6) {
-    return { isLeaf: false, reason: 'PLEASE UPLOAD LEAF IMAGES ONLY' };
-  }
-
-  // 11. Must have natural leaf green variety - real leaves show multiple green tones
-  if (naturalGreenVariety < 2 && leafGreenRatio < 0.15) {
-    return { isLeaf: false, reason: 'PLEASE UPLOAD LEAF IMAGES ONLY' };
-  }
-
-  // 12. Leaf-specific green tones must be present in meaningful amounts
-  if (leafGreenRatio < 0.10 && darkGreenRatio < 0.08 && lightGreenRatio < 0.05) {
-    return { isLeaf: false, reason: 'PLEASE UPLOAD LEAF IMAGES ONLY' };
-  }
-
-  // 13. Artificial green (neon/saturated) - real leaves have more muted greens
-  const artificialGreenPixels = (() => {
-    let count = 0;
-    for (let i = 0; i < data.length; i += 4) {
-      const r = data[i], g = data[i + 1], b = data[i + 2];
-      if (g > 200 && r < 50 && b < 50) count++;
-    }
-    return count;
-  })();
-  if (artificialGreenPixels / totalPixels > 0.3) {
-    return { isLeaf: false, reason: 'PLEASE UPLOAD LEAF IMAGES ONLY' };
-  }
-
-  // 14. Edge/texture check - leaves have veins and edges creating color transitions
-  if (greenRatio > 0.4 && edgeRatio < 0.02) {
-    return { isLeaf: false, reason: 'PLEASE UPLOAD LEAF IMAGES ONLY' };
-  }
-
-  // Passed all checks
-  return { isLeaf: true, reason: 'Valid leaf image detected' };
-}
-
 function analyzeImageColors(imageData: ImageData): DiseaseDetectionResult {
   const data = imageData.data;
   const totalPixels = data.length / 4;
   let greenPixels = 0, yellowPixels = 0, brownPixels = 0, whitePixels = 0, darkPixels = 0;
-  let totalR = 0, totalG = 0, totalB = 0;
+  let totalR = 0;
 
   for (let i = 0; i < data.length; i += 4) {
     const r = data[i], g = data[i + 1], b = data[i + 2];
-    totalR += r; totalG += g; totalB += b;
+    totalR += r;
     if (g > 100 && g > r * 1.2 && g > b * 1.2) greenPixels++;
     else if (r > 180 && g > 180 && b < 100) yellowPixels++;
     else if (r > 100 && g < 100 && b < 80) brownPixels++;
@@ -208,9 +40,7 @@ function analyzeImageColors(imageData: ImageData): DiseaseDetectionResult {
     else if (r < 60 && g < 60 && b < 60) darkPixels++;
   }
 
-  const avgG = totalG / totalPixels;
   const avgR = totalR / totalPixels;
-  const avgB = totalB / totalPixels;
   const greenRatio = greenPixels / totalPixels;
   const yellowRatio = yellowPixels / totalPixels;
   const brownRatio = brownPixels / totalPixels;
@@ -266,6 +96,21 @@ function getSeverityTextColor(severity: string): string {
   }
 }
 
+async function translateTextClient(text: string, destLang: string): Promise<string> {
+  if (!text) return '';
+  try {
+    const response = await fetch(
+      `https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=${destLang}&dt=t&q=${encodeURIComponent(text)}`
+    );
+    if (!response.ok) throw new Error('Translation failed');
+    const data = await response.json();
+    return data[0].map((x: any) => x[0]).join('');
+  } catch (error) {
+    console.error('Translation error:', error);
+    return text;
+  }
+}
+
 export default function DiseaseDetection() {
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [result, setResult] = useState<DiseaseDetectionResult | null>(null);
@@ -276,16 +121,49 @@ export default function DiseaseDetection() {
   const [validationError, setValidationError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [treatmentTe, setTreatmentTe] = useState('');
+  const [treatmentHi, setTreatmentHi] = useState('');
+  const [translationLoading, setTranslationLoading] = useState(false);
+  const [treatmentLang, setTreatmentLang] = useState<'en' | 'te' | 'hi'>('en');
 
   const handleImageUpload = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    setLoading(true);
+    setValidationError(null);
+    setResult(null);
+    setTreatmentTe('');
+    setTreatmentHi('');
+    setTreatmentLang('en');
+    setSaved(false);
+
     const reader = new FileReader();
     reader.onload = () => {
-      setSelectedImage(reader.result as string);
-      setResult(null);
-      setSaved(false);
-      setValidationError(null);
+      const img = new Image();
+      img.onload = () => {
+        const canvas = canvasRef.current || document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+          setLoading(false);
+          setValidationError('Could not initialize canvas context.');
+          return;
+        }
+        canvas.width = 224;
+        canvas.height = 224;
+        ctx.drawImage(img, 0, 0, 224, 224);
+        const imageData = ctx.getImageData(0, 0, 224, 224);
+
+        const validation = isLeafImage(imageData);
+        setLoading(false);
+        if (!validation.isLeaf) {
+          setValidationError(validation.reason);
+          setSelectedImage(null);
+          if (fileInputRef.current) fileInputRef.current.value = '';
+        } else {
+          setSelectedImage(reader.result as string);
+        }
+      };
+      img.src = reader.result as string;
     };
     reader.readAsDataURL(file);
   }, []);
@@ -296,24 +174,35 @@ export default function DiseaseDetection() {
     if (!selectedImage || !canvasRef.current) return;
     setLoading(true);
     setValidationError(null);
+    setTreatmentTe('');
+    setTreatmentHi('');
+    setTreatmentLang('en');
 
     const img = new Image();
-    img.onload = () => {
+    img.onload = async () => {
       const canvas = canvasRef.current!;
       const ctx = canvas.getContext('2d')!;
       canvas.width = 224; canvas.height = 224;
       ctx.drawImage(img, 0, 0, 224, 224);
       const imageData = ctx.getImageData(0, 0, 224, 224);
 
-      const validation = isLeafImage(imageData);
-      if (!validation.isLeaf) {
-        setValidationError(validation.reason);
-        setLoading(false);
-        return;
-      }
-
       const detection = analyzeImageColors(imageData);
       setResult(detection);
+      
+      setTranslationLoading(true);
+      try {
+        const [te, hi] = await Promise.all([
+          translateTextClient(detection.treatment, 'te'),
+          translateTextClient(detection.treatment, 'hi')
+        ]);
+        setTreatmentTe(te);
+        setTreatmentHi(hi);
+      } catch (e) {
+        console.error('Translation error:', e);
+      } finally {
+        setTranslationLoading(false);
+      }
+      
       setLoading(false);
     };
     img.src = selectedImage;
@@ -321,14 +210,55 @@ export default function DiseaseDetection() {
 
   const saveResult = async () => {
     if (!result) return;
-    const { error } = await supabase.from('crop_diseases').insert({
-      detected_disease: result.disease, confidence: result.confidence, severity: result.severity,
-      recommended_treatment: result.treatment, image_url: selectedImage
-    });
-    if (!error) { setSaved(true); setTimeout(() => setSaved(false), 3000); }
+
+    const isSupabaseConfigured =
+      import.meta.env.VITE_SUPABASE_URL &&
+      !import.meta.env.VITE_SUPABASE_URL.includes('placeholder') &&
+      import.meta.env.VITE_SUPABASE_ANON_KEY &&
+      import.meta.env.VITE_SUPABASE_ANON_KEY !== 'placeholder';
+
+    if (isSupabaseConfigured) {
+      try {
+        const { error } = await supabase.from('crop_diseases').insert({
+          detected_disease: result.disease, confidence: result.confidence, severity: result.severity,
+          recommended_treatment: result.treatment, image_url: selectedImage
+        });
+        if (!error) {
+          setSaved(true);
+          setTimeout(() => setSaved(false), 3000);
+          return;
+        }
+      } catch (err) {
+        console.warn('Supabase insert failed, falling back to localStorage:', err);
+      }
+    }
+
+    // Local storage fallback
+    const newDisease = {
+      id: Math.random().toString(36).substring(2, 9),
+      detected_disease: result.disease,
+      confidence: result.confidence,
+      severity: result.severity,
+      recommended_treatment: result.treatment,
+      image_url: selectedImage,
+      detected_at: new Date().toISOString()
+    };
+    const localDiseases = JSON.parse(localStorage.getItem('crop_diseases') || '[]');
+    localDiseases.unshift(newDisease);
+    localStorage.setItem('crop_diseases', JSON.stringify(localDiseases));
+    setSaved(true);
+    setTimeout(() => setSaved(false), 3000);
   };
 
-  const reset = () => { setSelectedImage(null); setResult(null); setSaved(false); setValidationError(null); };
+  const reset = () => {
+    setSelectedImage(null);
+    setResult(null);
+    setTreatmentTe('');
+    setTreatmentHi('');
+    setTreatmentLang('en');
+    setSaved(false);
+    setValidationError(null);
+  };
 
   const filteredDiseases = DISEASE_DATABASE.filter(d =>
     d.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -432,8 +362,41 @@ export default function DiseaseDetection() {
                           <p className="text-xs sm:text-sm text-gray-900">{result.symptoms}</p>
                         </div>
                         <div className="bg-emerald-50 rounded-lg sm:rounded-xl p-3 sm:p-4 border border-emerald-100">
-                          <p className="text-xs sm:text-sm font-medium text-emerald-800 mb-1">Recommended Treatment</p>
-                          <p className="text-xs sm:text-sm text-emerald-900">{result.treatment}</p>
+                          <div className="flex items-center justify-between mb-1.5">
+                            <p className="text-xs sm:text-sm font-medium text-emerald-800">Recommended Treatment</p>
+                            <div className="flex gap-1 bg-emerald-100/50 p-0.5 rounded-lg border border-emerald-200/50">
+                              <button
+                                onClick={() => setTreatmentLang('en')}
+                                className={`px-2 py-0.5 rounded text-[10px] sm:text-xs font-semibold transition-colors ${treatmentLang === 'en' ? 'bg-emerald-600 text-white shadow-sm' : 'text-emerald-800 hover:bg-emerald-100'}`}
+                              >
+                                EN
+                              </button>
+                              <button
+                                onClick={() => setTreatmentLang('te')}
+                                className={`px-2 py-0.5 rounded text-[10px] sm:text-xs font-semibold transition-colors ${treatmentLang === 'te' ? 'bg-emerald-600 text-white shadow-sm' : 'text-emerald-800 hover:bg-emerald-100'}`}
+                              >
+                                తే
+                              </button>
+                              <button
+                                onClick={() => setTreatmentLang('hi')}
+                                className={`px-2 py-0.5 rounded text-[10px] sm:text-xs font-semibold transition-colors ${treatmentLang === 'hi' ? 'bg-emerald-600 text-white shadow-sm' : 'text-emerald-800 hover:bg-emerald-100'}`}
+                              >
+                                हिं
+                              </button>
+                            </div>
+                          </div>
+                          {translationLoading ? (
+                            <div className="flex items-center gap-2 text-emerald-700 py-1">
+                              <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                              <span className="text-xs sm:text-sm">Translating...</span>
+                            </div>
+                          ) : (
+                            <p className="text-xs sm:text-sm text-emerald-900 leading-relaxed whitespace-pre-line">
+                              {treatmentLang === 'en' && result.treatment}
+                              {treatmentLang === 'te' && (treatmentTe || result.treatment)}
+                              {treatmentLang === 'hi' && (treatmentHi || result.treatment)}
+                            </p>
+                          )}
                         </div>
                       </div>
                       <div className="flex gap-2 sm:gap-3">

@@ -21,3 +21,6 @@ dist-ssr
 *.sln
 *.sw?
 .env
+.krishimitra_config.json
+__pycache__/
+*.pyc
