@@ -24,6 +24,16 @@ def load_config():
         "gemini_model": "gemini-1.5-flash",
         "language": "English"
     }
+    
+    # Check if we are running in a deployed environment
+    is_deployed = (
+        os.environ.get("STREAMLIT_SHARING_AUTHOR") is not None or 
+        os.environ.get("RENDER") is not None or 
+        os.environ.get("RAILWAY_STATIC_URL") is not None or
+        os.environ.get("PORT") is not None or
+        os.environ.get("STREAMLIT_SERVER_HEADLESS") == "true"
+    )
+    
     if os.path.exists(CONFIG_FILE):
         try:
             with open(CONFIG_FILE, "r") as f:
@@ -33,6 +43,13 @@ def load_config():
                     saved["cloud_provider"] = "Groq"
                 if "openai_key" in saved:
                     saved["groq_key"] = saved.pop("openai_key")
+                
+                # If running on cloud/deployed server, strip existing key configuration 
+                # so users start with clean/empty fields and enter their own keys (BYOK)
+                if is_deployed:
+                    saved.pop("gemini_key", None)
+                    saved.pop("groq_key", None)
+                    
                 default_config.update(saved)
         except Exception:
             pass
@@ -47,7 +64,12 @@ def save_config(config):
 
 # Initialize App State
 st.set_page_config(page_title="KrishiMitra AI", page_icon="🌾", layout="wide")
-config = load_config()
+
+# Use session state for configuration storage to prevent inter-user key leakages in deployed app
+if "config" not in st.session_state:
+    st.session_state.config = load_config()
+
+config = st.session_state.config
 
 # Set translation target language based on config selection
 selected_lang_name = config.get("language", "English")
@@ -806,8 +828,21 @@ with st.sidebar:
 # 1. SETTINGS PAGE
 if page == "Settings":
     st.title("⚙️ Settings (BYOK & Configuration)")
-    st.write("Configure your model providers, API keys, and language preferences. Stored locally.")
+    st.write("Configure your model providers, API keys, and language preferences.")
     
+    is_deployed = (
+        os.environ.get("STREAMLIT_SHARING_AUTHOR") is not None or 
+        os.environ.get("RENDER") is not None or 
+        os.environ.get("RAILWAY_STATIC_URL") is not None or
+        os.environ.get("PORT") is not None or
+        os.environ.get("STREAMLIT_SERVER_HEADLESS") == "true"
+    )
+    
+    if is_deployed:
+        st.info("ℹ️ **Running in Deployed Mode (BYOK)**: To protect your privacy, configuration changes are saved in your browser's current tab session only. They will not be saved on the server disk or shared with other users.")
+    else:
+        st.write("Stored locally in configuration file.")
+        
     with st.form("settings_form"):
         col1, col2 = st.columns(2)
         with col1:
@@ -840,7 +875,9 @@ if page == "Settings":
                 "ollama_model": ollama_model,
                 "language": language
             }
-            save_config(new_config)
+            st.session_state.config = new_config
+            if not is_deployed:
+                save_config(new_config)
             st.success("Settings saved successfully! Reloading variables...")
             st.rerun()
 

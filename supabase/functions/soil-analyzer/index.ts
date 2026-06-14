@@ -23,7 +23,16 @@ Deno.serve(async (req: Request) => {
     }
 
     const body = await req.json();
-    const { rawText } = body;
+    const { rawText, userApiKey } = body;
+
+    const apiKey = userApiKey || Deno.env.get("GEMINI_API_KEY") || GEMINI_API_KEY;
+
+    if (!apiKey || apiKey.includes("placeholder") || apiKey === "AQ.Ab8RN6J1k_7nwo9I9YC95jKYqvmPbrN-AcphpfRISACHorW8Mw" || apiKey.trim() === "") {
+      return new Response(
+        JSON.stringify({ error: "Missing or invalid Gemini API Key. Please enter a valid Gemini API Key to run the soil analysis." }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
 
     if (!rawText || typeof rawText !== "string" || rawText.trim().length === 0) {
       return new Response(
@@ -56,7 +65,7 @@ Soil Report:
 
     for (const model of GEMINI_MODELS) {
       geminiRes = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${GEMINI_API_KEY}`,
+        `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },

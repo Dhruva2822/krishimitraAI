@@ -121,6 +121,13 @@ export default function SoilAnalyzer() {
   const [recommendationsHi, setRecommendationsHi] = useState('');
   const [translationLoading, setTranslationLoading] = useState(false);
   const [recommendationsLang, setRecommendationsLang] = useState<'en' | 'te' | 'hi'>('en');
+  const [geminiApiKey, setGeminiApiKey] = useState(() => localStorage.getItem('gemini_api_key') || '');
+
+  const handleGeminiKeyChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const key = e.target.value;
+    setGeminiApiKey(key);
+    localStorage.setItem('gemini_api_key', key);
+  };
 
   const parseSoilReportLocally = (reportText: string): SoilAnalysisResult => {
     const findNumber = (regexes: RegExp[], defaultValue: number): number => {
@@ -285,7 +292,7 @@ export default function SoilAnalyzer() {
             'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
             'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY,
           },
-          body: JSON.stringify({ rawText: text }),
+          body: JSON.stringify({ rawText: text, userApiKey: geminiApiKey }),
         });
 
         if (!response.ok) {
@@ -296,7 +303,13 @@ export default function SoilAnalyzer() {
         const data = await response.json();
         analysis = normalizeGeminiResult(data);
       } catch (err) {
-        console.warn('Supabase edge function failed, falling back to local analysis:', err);
+        console.warn('Supabase edge function failed:', err);
+        const errMsg = err instanceof Error ? err.message : String(err);
+        if (errMsg.includes('API Key') || errMsg.includes('API key') || errMsg.includes('key')) {
+          setError(errMsg);
+          setLoading(false);
+          return;
+        }
       }
     }
 
@@ -484,6 +497,22 @@ export default function SoilAnalyzer() {
                 </div>
               </div>
               <div className="p-4 sm:p-6">
+                {/* Gemini API Key BYOK Section */}
+                <div className="mb-4 bg-amber-50/50 p-3 sm:p-4 rounded-xl border border-amber-200/50">
+                  <label className="block text-xs font-semibold text-amber-800 mb-1.5 flex items-center gap-1.5">
+                    🔑 Gemini API Key (Bring Your Own Key)
+                  </label>
+                  <input
+                    type="password"
+                    value={geminiApiKey}
+                    onChange={handleGeminiKeyChange}
+                    placeholder="AIzaSy... (Saved locally in your browser)"
+                    className="w-full px-3 py-2 bg-white border border-amber-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500 text-xs sm:text-sm"
+                  />
+                  <p className="text-[10px] text-amber-700/70 mt-1">
+                    Get a key from <a href="https://aistudio.google.com/" target="_blank" rel="noopener noreferrer" className="underline font-medium hover:text-amber-800">Google AI Studio</a>. Required for AI analysis.
+                  </p>
+                </div>
                 {showSample && (
                   <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} transition={{ duration: 0.2 }} className="mb-4 space-y-2">
                     {SAMPLE_REPORTS.map((report, idx) => (

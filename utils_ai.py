@@ -23,6 +23,9 @@ def extract_text_from_pdf(pdf_bytes):
 def query_gemini(prompt, api_key, image_bytes=None, model_name="gemini-flash-latest"):
     """Send text/image request to Gemini model."""
     if not api_key:
+        import os
+        api_key = os.environ.get("GEMINI_API_KEY", "")
+    if not api_key:
         return "Error: Gemini API Key is missing. Please set it in the Settings page."
         
     model_name = model_name.strip()
@@ -49,6 +52,7 @@ def query_gemini(prompt, api_key, image_bytes=None, model_name="gemini-flash-lat
                 contents.append(img)
             contents.append(prompt)
             
+            # Use generation config to prevent deprecated issues
             response = model.generate_content(contents)
             return response.text
         except Exception as e:
@@ -79,6 +83,9 @@ def query_gemini(prompt, api_key, image_bytes=None, model_name="gemini-flash-lat
 def query_groq(prompt, api_key, image_bytes=None, model="llama-3.3-70b-versatile"):
     """Send text request to Groq model using OpenAI compatibility layers."""
     try:
+        if not api_key:
+            import os
+            api_key = os.environ.get("GROQ_API_KEY", "")
         if not api_key:
             return "Error: Groq API Key is missing. Please set it in the Settings page."
             
