@@ -104,7 +104,7 @@ async function translateTextClient(text: string, destLang: string): Promise<stri
     );
     if (!response.ok) throw new Error('Translation failed');
     const data = await response.json();
-    return data[0].map((x: any) => x[0]).join('');
+    return data[0].map((x: string[]) => x[0]).join('');
   } catch (error) {
     console.error('Translation error:', error);
     return text;

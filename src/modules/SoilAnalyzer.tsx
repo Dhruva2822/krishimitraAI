@@ -6,7 +6,7 @@ import {
   Languages, Loader2, AlertCircle, Leaf
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
-import { type SoilAnalysisResult } from '../lib/types';
+import { type SoilAnalysisResult, type SoilReport } from '../lib/types';
 import { isLeafImage } from '../lib/leafValidation';
 
 
@@ -97,7 +97,7 @@ async function translateTextClient(text: string, destLang: string): Promise<stri
     );
     if (!response.ok) throw new Error('Translation failed');
     const data = await response.json();
-    return data[0].map((x: any) => x[0]).join('');
+    return data[0].map((x: string[]) => x[0]).join('');
   } catch (error) {
     console.error('Translation error:', error);
     return text;
@@ -111,7 +111,7 @@ export default function SoilAnalyzer() {
   const [saved, setSaved] = useState(false);
   const [showSample, setShowSample] = useState(false);
   const [showSaved, setShowSaved] = useState(false);
-  const [savedReports, setSavedReports] = useState<any[]>([]);
+  const [savedReports, setSavedReports] = useState<SoilReport[]>([]);
   const [fileName, setFileName] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [validationError, setValidationError] = useState<string | null>(null);
@@ -295,7 +295,7 @@ export default function SoilAnalyzer() {
 
         const data = await response.json();
         analysis = normalizeGeminiResult(data);
-      } catch (err: any) {
+      } catch (err) {
         console.warn('Supabase edge function failed, falling back to local analysis:', err);
       }
     }
@@ -306,7 +306,7 @@ export default function SoilAnalyzer() {
         // Simulate slight delay to represent analysis progress
         await new Promise(resolve => setTimeout(resolve, 800));
         analysis = parseSoilReportLocally(text);
-      } catch (err: any) {
+      } catch {
         setError('Failed to analyze report locally. Please check the format.');
       }
     }
@@ -361,6 +361,7 @@ export default function SoilAnalyzer() {
     // Local storage fallback
     const newReport = {
       id: Math.random().toString(36).substring(2, 9),
+      parcel_id: null,
       analyzed_at: new Date().toISOString(),
       raw_text: text,
       ph_level: result.ph_level,
@@ -436,7 +437,7 @@ export default function SoilAnalyzer() {
   };
 
   const fetchSavedReports = async () => {
-    let remoteReports: any[] = [];
+    let remoteReports: SoilReport[] = [];
     const isSupabaseConfigured =
       import.meta.env.VITE_SUPABASE_URL &&
       !import.meta.env.VITE_SUPABASE_URL.includes('placeholder') &&

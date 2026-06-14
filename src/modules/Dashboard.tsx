@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
+import { Link } from 'react-router-dom';
 import {
   Bar, BarChart, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   LineChart, Line, PieChart, Pie, Cell, AreaChart, Area
@@ -27,10 +28,10 @@ export default function Dashboard() {
 
   useEffect(() => {
     const fetchAll = async () => {
-      let parcels: any[] = [];
-      let yields: any[] = [];
-      let diseases: any[] = [];
-      let soils: any[] = [];
+      let parcels: FarmParcel[] = [];
+      let yields: YieldRecord[] = [];
+      let diseases: CropDisease[] = [];
+      let soils: SoilReport[] = [];
 
       const isSupabaseConfigured =
         import.meta.env.VITE_SUPABASE_URL &&
@@ -59,17 +60,17 @@ export default function Dashboard() {
       const localSoils = JSON.parse(localStorage.getItem('soil_reports') || '[]');
       const localDiseases = JSON.parse(localStorage.getItem('crop_diseases') || '[]');
 
-      const mockParcels = [
-        { id: '1', name: 'North Field', crop_type: 'Wheat', area_hectares: 12.5 },
-        { id: '2', name: 'East Field', crop_type: 'Rice', area_hectares: 8.2 },
-        { id: '3', name: 'Hillside', crop_type: 'Tomato', area_hectares: 4.5 },
-        { id: '4', name: 'Valley Farm', crop_type: 'Soybean', area_hectares: 15.0 },
+      const mockParcels: FarmParcel[] = [
+        { id: '1', name: 'North Field', crop_type: 'Wheat', area_hectares: 12.5, soil_type: 'Loamy', location: 'Zone A', created_at: new Date().toISOString() },
+        { id: '2', name: 'East Field', crop_type: 'Rice', area_hectares: 8.2, soil_type: 'Clayey', location: 'Zone B', created_at: new Date().toISOString() },
+        { id: '3', name: 'Hillside', crop_type: 'Tomato', area_hectares: 4.5, soil_type: 'Sandy', location: 'Zone C', created_at: new Date().toISOString() },
+        { id: '4', name: 'Valley Farm', crop_type: 'Soybean', area_hectares: 15.0, soil_type: 'Silty', location: 'Zone D', created_at: new Date().toISOString() },
       ];
-      const mockYields = [
-        { id: '1', parcel_id: '1', year: 2024, season: 'Rabi', yield_tons: 45.2, rainfall_mm: 650 },
-        { id: '2', parcel_id: '2', year: 2024, season: 'Kharif', yield_tons: 32.8, rainfall_mm: 1200 },
-        { id: '3', parcel_id: '3', year: 2024, season: 'Zaid', yield_tons: 15.4, rainfall_mm: 300 },
-        { id: '4', parcel_id: '4', year: 2024, season: 'Kharif', yield_tons: 50.1, rainfall_mm: 1100 },
+      const mockYields: YieldRecord[] = [
+        { id: '1', parcel_id: '1', year: 2024, season: 'Rabi', yield_tons: 45.2, rainfall_mm: 650, fertilizer_used_kg: 200, seed_variety: 'HD 2967', created_at: new Date().toISOString() },
+        { id: '2', parcel_id: '2', year: 2024, season: 'Kharif', yield_tons: 32.8, rainfall_mm: 1200, fertilizer_used_kg: 150, seed_variety: 'Swarna', created_at: new Date().toISOString() },
+        { id: '3', parcel_id: '3', year: 2024, season: 'Zaid', yield_tons: 15.4, rainfall_mm: 300, fertilizer_used_kg: 80, seed_variety: 'Arka Vikas', created_at: new Date().toISOString() },
+        { id: '4', parcel_id: '4', year: 2024, season: 'Kharif', yield_tons: 50.1, rainfall_mm: 1100, fertilizer_used_kg: 250, seed_variety: 'JS 335', created_at: new Date().toISOString() },
       ];
 
       setData({
@@ -309,9 +310,9 @@ export default function Dashboard() {
               <p className="text-emerald-100 text-xs sm:text-sm">Access all farm management tools</p>
             </div>
             <div className="flex flex-wrap gap-2 sm:gap-3">
-              <a href="/disease" className="px-3 py-2 sm:px-5 sm:py-3 bg-white/20 rounded-lg sm:rounded-xl text-sm font-medium hover:bg-white/30 transition-colors flex items-center gap-1.5 sm:gap-2"><Leaf className="w-4 h-4 sm:w-5 sm:h-5" /> Disease Check</a>
-              <a href="/soil" className="px-3 py-2 sm:px-5 sm:py-3 bg-white/20 rounded-lg sm:rounded-xl text-sm font-medium hover:bg-white/30 transition-colors flex items-center gap-1.5 sm:gap-2"><Droplets className="w-4 h-4 sm:w-5 sm:h-5" /> Soil Analysis</a>
-              <a href="/crop" className="px-3 py-2 sm:px-5 sm:py-3 bg-white/20 rounded-lg sm:rounded-xl text-sm font-medium hover:bg-white/30 transition-colors flex items-center gap-1.5 sm:gap-2"><Wheat className="w-4 h-4 sm:w-5 sm:h-5" /> Crop Recommend</a>
+              <Link to="/disease" className="px-3 py-2 sm:px-5 sm:py-3 bg-white/20 rounded-lg sm:rounded-xl text-sm font-medium hover:bg-white/30 transition-colors flex items-center gap-1.5 sm:gap-2"><Leaf className="w-4 h-4 sm:w-5 sm:h-5" /> Disease Check</Link>
+              <Link to="/soil" className="px-3 py-2 sm:px-5 sm:py-3 bg-white/20 rounded-lg sm:rounded-xl text-sm font-medium hover:bg-white/30 transition-colors flex items-center gap-1.5 sm:gap-2"><Droplets className="w-4 h-4 sm:w-5 sm:h-5" /> Soil Analysis</Link>
+              <Link to="/crop" className="px-3 py-2 sm:px-5 sm:py-3 bg-white/20 rounded-lg sm:rounded-xl text-sm font-medium hover:bg-white/30 transition-colors flex items-center gap-1.5 sm:gap-2"><Wheat className="w-4 h-4 sm:w-5 sm:h-5" /> Crop Recommend</Link>
             </div>
           </div>
         </div>

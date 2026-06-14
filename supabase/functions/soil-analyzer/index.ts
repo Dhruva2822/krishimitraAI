@@ -52,11 +52,9 @@ Soil Report:
 `;
 
     let geminiRes: Response | null = null;
-    let usedModel = "";
     let lastError = "";
 
     for (const model of GEMINI_MODELS) {
-      usedModel = model;
       geminiRes = await fetch(
         `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${GEMINI_API_KEY}`,
         {
@@ -134,9 +132,10 @@ Soil Report:
       JSON.stringify(clean),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
-  } catch (err: any) {
+  } catch (err) {
+    const errorMsg = err instanceof Error ? err.message : "Internal error";
     return new Response(
-      JSON.stringify({ error: err.message || "Internal error" }),
+      JSON.stringify({ error: errorMsg }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }

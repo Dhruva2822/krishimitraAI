@@ -18,7 +18,7 @@ def load_config():
         "mode": "Cloud",
         "cloud_provider": "Groq",
         "gemini_key": "",
-        "groq_key": "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",
+        "groq_key": "",
         "ollama_host": "http://localhost:11434",
         "ollama_model": "llama3.2",
         "gemini_model": "gemini-1.5-flash",
@@ -36,9 +36,6 @@ def load_config():
                 default_config.update(saved)
         except Exception:
             pass
-    # Enforce default groq_key if missing or blank
-    if not default_config.get("groq_key"):
-        default_config["groq_key"] = "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"
     return default_config
 
 def save_config(config):
@@ -223,15 +220,10 @@ st.markdown("""
 /* Import modern outfit and plus jakarta sans fonts */
 @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
 
-/* Main content text styling - Slate black to ensure perfect contrast and zero visibility issues */
+/* Main content text styling - Adapt to theme text color for perfect contrast in light and dark modes */
 .main, .main .stMarkdown, .main p, .main span, .main li, .main label, .main h1, .main h2, .main h3, .main h4, .main h5, .main h6 {
     font-family: 'Plus Jakarta Sans', sans-serif;
-    color: #0f172a !important;
-}
-
-/* Global Background styling - Natural soft gradient */
-.stApp {
-    background: linear-gradient(135deg, #f8fafc 0%, #f0fdf4 50%, #e8f5e9 100%) !important;
+    color: var(--text-color, #0f172a) !important;
 }
 
 /* Sidebar primary layout styling - Premium Dark Forest Green Theme */
@@ -274,8 +266,8 @@ button[data-testid="stSidebarCollapseButton"] {
     overflow-y: auto !important;
 }
 
-/* Navigation radio styling specifically for vertical side menu links */
-div[data-testid="stRadio"]:not(form div[data-testid="stRadio"]) > div[role="radiogroup"] {
+/* Navigation radio styling specifically for vertical side menu links in the sidebar */
+[data-testid="stSidebar"] div[data-testid="stRadio"] > div[role="radiogroup"] {
     display: flex !important;
     flex-direction: column !important;
     justify-content: flex-start !important;
@@ -283,7 +275,7 @@ div[data-testid="stRadio"]:not(form div[data-testid="stRadio"]) > div[role="radi
     margin-top: 15px !important;
 }
 
-div[data-testid="stRadio"]:not(form div[data-testid="stRadio"]) label {
+[data-testid="stSidebar"] div[data-testid="stRadio"] label {
     width: 100% !important;
     box-sizing: border-box !important;
     padding: 12px 16px !important;
@@ -295,7 +287,7 @@ div[data-testid="stRadio"]:not(form div[data-testid="stRadio"]) label {
     cursor: pointer !important;
 }
 
-div[data-testid="stRadio"]:not(form div[data-testid="stRadio"]) label p {
+[data-testid="stSidebar"] div[data-testid="stRadio"] label p {
     color: #a7f3d0 !important; /* Default unselected: bright mint green */
     font-weight: 500 !important;
     font-size: 13.5px !important;
@@ -303,33 +295,33 @@ div[data-testid="stRadio"]:not(form div[data-testid="stRadio"]) label p {
     letter-spacing: 0.2px !important;
 }
 
-div[data-testid="stRadio"]:not(form div[data-testid="stRadio"]) label:hover {
+[data-testid="stSidebar"] div[data-testid="stRadio"] label:hover {
     background-color: rgba(255, 255, 255, 0.08) !important;
 }
 
-div[data-testid="stRadio"]:not(form div[data-testid="stRadio"]) label:hover p {
+[data-testid="stSidebar"] div[data-testid="stRadio"] label:hover p {
     color: #ffffff !important; /* Hover state: bright white text */
 }
 
 /* Reflective glowing active state for sidebar links */
-div[data-testid="stRadio"]:not(form div[data-testid="stRadio"]) label:has(input:checked) {
+[data-testid="stSidebar"] div[data-testid="stRadio"] label:has(input:checked) {
     background: linear-gradient(90deg, rgba(52, 211, 153, 0.15) 0%, rgba(52, 211, 153, 0.05) 100%) !important;
     border-left: 4px solid #34d399 !important;
     border-color: transparent transparent transparent #34d399 !important;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
 }
 
-div[data-testid="stRadio"]:not(form div[data-testid="stRadio"]) label:has(input:checked) p {
+[data-testid="stSidebar"] div[data-testid="stRadio"] label:has(input:checked) p {
     color: #ffffff !important; /* Checked state: bright active white */
     font-weight: 700 !important;
     text-shadow: 0 0 8px rgba(52, 211, 153, 0.5) !important; /* Reflective text glow */
 }
 
-/* Hide default radio circle completely for all styled radios */
-div[data-testid="stRadio"] div[role="radiogroup"] label > div:first-of-type {
+/* Hide default radio circle completely for styled sidebar radios ONLY */
+[data-testid="stSidebar"] div[data-testid="stRadio"] div[role="radiogroup"] label > div:first-of-type {
     display: none !important;
 }
-div[data-testid="stRadio"] div[role="radiogroup"] label > div:nth-of-type(2) {
+[data-testid="stSidebar"] div[data-testid="stRadio"] div[role="radiogroup"] label > div:nth-of-type(2) {
     padding-left: 0 !important;
     margin-left: 0 !important;
 }
@@ -363,13 +355,13 @@ form div[data-testid="stRadio"] > div[role="radiogroup"] {
 .farm-card {
     position: relative;
     overflow: hidden;
-    background: rgba(255, 255, 255, 0.8) !important;
+    background: rgba(255, 255, 255, 0.05) !important;
     backdrop-filter: blur(16px) !important;
     -webkit-backdrop-filter: blur(16px) !important;
     padding: 28px 24px;
     border-radius: 20px;
-    border: 1px solid rgba(16, 185, 129, 0.08) !important;
-    box-shadow: 0 10px 30px rgba(15, 23, 42, 0.04) !important;
+    border: 1px solid rgba(16, 185, 129, 0.15) !important;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05) !important;
     margin-bottom: 24px;
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
@@ -522,18 +514,18 @@ div.stButton > button:focus, div.stFormSubmitButton > button:focus {
     border: none !important;
 }
 
-/* Text and Number Input styles - Dark text and white background for perfect accessibility */
+/* Text and Number Input styles - Adapt to theme backgrounds and colors */
 div[data-baseweb="input"] {
     border-radius: 12px !important;
-    border: 1px solid #e2e8f0 !important;
-    background-color: #ffffff !important;
+    border: 1px solid rgba(16, 185, 129, 0.15) !important;
+    background-color: var(--background-color) !important;
     transition: all 0.2s ease !important;
     padding: 4px 8px !important;
 }
 
 div[data-baseweb="input"] input, div[data-baseweb="textarea"] textarea {
-    color: #0f172a !important;
-    -webkit-text-fill-color: #0f172a !important;
+    color: var(--text-color) !important;
+    -webkit-text-fill-color: var(--text-color) !important;
 }
 
 div[data-baseweb="input"]:focus-within {
@@ -544,23 +536,23 @@ div[data-baseweb="input"]:focus-within {
 /* Select boxes - Fix contrast to prevent light-on-light text rendering bugs */
 div[data-baseweb="select"] {
     border-radius: 12px !important;
-    border: 1px solid #e2e8f0 !important;
-    background-color: #ffffff !important;
+    border: 1px solid rgba(16, 185, 129, 0.15) !important;
+    background-color: var(--background-color) !important;
 }
 
 div[data-baseweb="select"] [data-testid="stSelectboxValue"] {
-    color: #0f172a !important;
+    color: var(--text-color) !important;
 }
 
 /* Explicit style for dropdown options inside selectbox listbox popovers */
 div[role="listbox"] ul li, [data-baseweb="popover"] li {
-    color: #0f172a !important;
-    background-color: #ffffff !important;
+    color: var(--text-color) !important;
+    background-color: var(--background-color) !important;
     font-size: 14px !important;
 }
 
 div[role="listbox"] ul li:hover, [data-baseweb="popover"] li:hover {
-    background-color: #e8f5e9 !important;
+    background-color: var(--secondary-background-color) !important;
     color: #10b981 !important;
 }
 
@@ -609,9 +601,9 @@ button[data-baseweb="tab"][aria-selected="true"] {
     justify-content: center;
     font-weight: 700;
     font-size: 17px;
-    color: #0f172a;
-    background-color: #ffffff;
-    box-shadow: inset 0 0 0 5px #f1f5f9;
+    color: var(--text-color);
+    background-color: var(--background-color);
+    box-shadow: inset 0 0 0 5px var(--secondary-background-color);
 }
 
 .gauge-ring-green { border: 5px solid #10b981; }
@@ -653,24 +645,46 @@ button[data-baseweb="tab"][aria-selected="true"] {
 
 .chat-bubble-user {
     align-self: flex-end;
-    background-color: #e0f2fe; /* soft sky blue */
-    color: #0369a1;
+    background-color: rgba(3, 105, 161, 0.15) !important;
+    color: var(--text-color) !important;
     border-bottom-right-radius: 4px;
-    border: 1px solid rgba(3, 105, 161, 0.1);
+    border: 1px solid rgba(3, 105, 161, 0.25) !important;
 }
 
 .chat-bubble-ai {
     align-self: flex-start;
-    background-color: #ffffff;
-    color: #1e293b;
+    background-color: var(--background-color) !important;
+    color: var(--text-color) !important;
     border-bottom-left-radius: 4px;
-    border: 1px solid rgba(16, 185, 129, 0.15);
+    border: 1px solid rgba(16, 185, 129, 0.25) !important;
 }
 
 /* Style headers inside expenders or subheaders */
 h4, h5, h6 {
-    color: #0f172a;
+    color: var(--text-color);
     font-weight: 700;
+}
+
+/* Forms styling - Force theme-based background and elegant borders to resolve dark theme contrast conflict */
+div[data-testid="stForm"] {
+    background-color: var(--secondary-background-color) !important;
+    border: 1px solid rgba(16, 185, 129, 0.15) !important;
+    border-radius: 20px !important;
+    padding: 28px 24px !important;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05) !important;
+}
+
+/* Expanders styling - Force theme-based background and elegant borders to resolve dark theme contrast conflict */
+div[data-testid="stExpander"] {
+    background-color: var(--secondary-background-color) !important;
+    border: 1px solid rgba(16, 185, 129, 0.15) !important;
+    border-radius: 12px !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.02) !important;
+}
+
+/* Ensure notifications (alerts) have readable text colors */
+div[data-testid="stNotification"] p, div[data-testid="stNotification"] span, div[data-testid="stNotification"] label {
+    color: inherit !important;
 }
 </style>
 """, unsafe_allow_html=True)
@@ -728,6 +742,19 @@ def draw_parameter_bar(label, actual, min_val, max_val, ideal_min, ideal_max, un
     """
     return html
 
+# Handle query parameters for page navigation
+pages_list = ["Dashboard", "Soil Analyzer", "Crop Recommendation", "Disease Assistant", "Voice Interaction", "Settings"]
+
+if "nav_radio" not in st.session_state:
+    st.session_state.nav_radio = "Dashboard"
+
+if "page" in st.query_params:
+    qp_page = st.query_params.get("page")
+    if qp_page in pages_list:
+        st.session_state.nav_radio = qp_page
+        # Clear query parameters to prevent sticky page redirection
+        st.query_params.clear()
+
 # Render Sidebar Navigation Panel (Fixed 100vh Workspace Sidebar)
 with st.sidebar:
     # Sidebar Header: Left-aligned, compact, modern workspace style
@@ -751,11 +778,13 @@ with st.sidebar:
     
     page = st.radio(
         "Navigation",
-        ["Dashboard", "Soil Analyzer", "Crop Recommendation", "Disease Assistant", "Voice Interaction", "Settings"],
+        pages_list,
         horizontal=False,
         label_visibility="collapsed",
-        format_func=lambda x: NAV_ICONS.get(x, x)
+        format_func=lambda x: NAV_ICONS.get(x, x),
+        key="nav_radio"
     )
+    st.session_state.page = page
     
     # Spacer to push console stats to the bottom
     st.markdown("<div style='flex-grow: 1; min-height: 100px;'></div>", unsafe_allow_html=True)
@@ -790,8 +819,10 @@ if page == "Settings":
         with col2:
             st.subheader("API Access (BYOK)")
             gemini_key = st.text_input("Gemini API Key", value=config.get("gemini_key", ""), type="password")
+            st.caption("Get a Gemini API key from [Google AI Studio](https://aistudio.google.com/)")
             gemini_model = st.text_input("Gemini Model Name", value=config.get("gemini_model", "gemini-1.5-flash"))
             groq_key = st.text_input("Groq API Key", value=config.get("groq_key", ""), type="password")
+            st.caption("Get a Groq API key from [Groq Console](https://console.groq.com/)")
             
             st.subheader("Local Model Config (Ollama)")
             ollama_host = st.text_input("Ollama Host URL", value=config.get("ollama_host", "http://localhost:11434"))
@@ -895,32 +926,38 @@ if page == "Dashboard":
     
     with col1:
         st.markdown(f"""
-        <div class="farm-card card-soil">
-            <h3 style="margin-top:0; color:#059669;">🧪 {L("Soil Analyzer")}</h3>
-            <p style="font-size:14px; color:#4b5563;">
-                {L("Upload images or PDF soil testing documents. The AI parses parameters and highlights deficiencies.")}
-            </p>
-        </div>
+        <a href="?page=Soil+Analyzer" target="_self" style="text-decoration: none; color: inherit;">
+            <div class="farm-card card-soil" style="cursor: pointer;">
+                <h3 style="margin-top:0; color:#059669;">🧪 {L("Soil Analyzer")}</h3>
+                <p style="font-size:14px; color:#4b5563;">
+                    {L("Upload images or PDF soil testing documents. The AI parses parameters and highlights deficiencies.")}
+                </p>
+            </div>
+        </a>
         """, unsafe_allow_html=True)
             
     with col2:
         st.markdown(f"""
-        <div class="farm-card card-crop">
-            <h3 style="margin-top:0; color:#2563eb;">🌾 {L("Crop Recommend")}</h3>
-            <p style="font-size:14px; color:#4b5563;">
-                {L("Enter chemical metrics, season, and regional locations to compute compatibility for 10 common crops.")}
-            </p>
-        </div>
+        <a href="?page=Crop+Recommendation" target="_self" style="text-decoration: none; color: inherit;">
+            <div class="farm-card card-crop" style="cursor: pointer;">
+                <h3 style="margin-top:0; color:#2563eb;">🌾 {L("Crop Recommend")}</h3>
+                <p style="font-size:14px; color:#4b5563;">
+                    {L("Enter chemical metrics, season, and regional locations to compute compatibility for 10 common crops.")}
+                </p>
+            </div>
+        </a>
         """, unsafe_allow_html=True)
             
     with col3:
         st.markdown(f"""
-        <div class="farm-card card-disease">
-            <h3 style="margin-top:0; color:#ea580c;">🍂 {L("Disease Assistant")}</h3>
-            <p style="font-size:14px; color:#4b5563;">
-                {L("Take a photo of an infected leaf. Get diagnostic reports, primary causes, and tailored remedies.")}
-            </p>
-        </div>
+        <a href="?page=Disease+Assistant" target="_self" style="text-decoration: none; color: inherit;">
+            <div class="farm-card card-disease" style="cursor: pointer;">
+                <h3 style="margin-top:0; color:#ea580c;">🍂 {L("Disease Assistant")}</h3>
+                <p style="font-size:14px; color:#4b5563;">
+                    {L("Take a photo of an infected leaf. Get diagnostic reports, primary causes, and tailored remedies.")}
+                </p>
+            </div>
+        </a>
         """, unsafe_allow_html=True)
 
 # 3. SOIL ANALYZER PAGE
@@ -948,7 +985,7 @@ elif page == "Soil Analyzer":
                 with st.spinner(L("AI is parsing soil parameters and generating report...")):
                     response = analyze_soil_report_ai(file_bytes, file_name, file_type, config)
                     
-                    if "API Error" in response or "Connection Error" in response:
+                    if "Error" in response:
                         st.error(response)
                     else:
                         extracted_data, report_text = parse_soil_analyzer_response(response)
@@ -1204,7 +1241,7 @@ elif page == "Disease Assistant":
                         response = diagnose_leaf_disease_ai(file_bytes, config)
                         
                         cleaned_resp = response.strip().strip('"').strip("'")
-                        if "API Error" in response or "Connection Error" in response:
+                        if "Error" in response:
                             st.error(response)
                         elif "NOT AN LEAF" in cleaned_resp or "UPLOAD LEAF IMAGES ONLY" in cleaned_resp:
                             st.error(L("NOT AN LEAF, PLS UPLOAD LEAF IMAGES ONLY"))

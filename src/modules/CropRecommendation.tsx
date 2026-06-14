@@ -228,6 +228,16 @@ const CROP_DATABASE: CropRequirement[] = [
   }
 ];
 
+interface SoilReport {
+  ph_level?: number | null;
+  nitrogen?: number | null;
+  phosphorus?: number | null;
+  potassium?: number | null;
+  organic_matter?: number | null;
+  moisture?: number | null;
+  analyzed_at?: string | null;
+}
+
 interface MatchedCrop {
   crop: CropRequirement;
   score: number; // 0 to 100
@@ -276,7 +286,7 @@ export default function CropRecommendation() {
       import.meta.env.VITE_SUPABASE_ANON_KEY &&
       import.meta.env.VITE_SUPABASE_ANON_KEY !== 'placeholder';
 
-    let latestReport: any = null;
+    let latestReport: SoilReport | null = null;
 
     if (isSupabaseConfigured) {
       try {
