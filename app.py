@@ -884,11 +884,22 @@ if page == "Settings":
             
         with col2:
             st.subheader("API Access (BYOK)")
-            gemini_key = st.text_input("Gemini API Key", value=config.get("gemini_key", ""), type="password")
-            st.caption("Get a Gemini API key from [Google AI Studio](https://aistudio.google.com/)")
+            
+            gemini_placeholder = "Keep existing key (enter new key to overwrite, or 'CLEAR' to delete)" if config.get("gemini_key") else "Enter Gemini API Key"
+            gemini_key_input = st.text_input("Gemini API Key", value="", placeholder=gemini_placeholder, type="password")
+            if config.get("gemini_key"):
+                st.caption("✅ Gemini API Key is configured")
+            else:
+                st.caption("❌ No Gemini API Key configured. Get one from [Google AI Studio](https://aistudio.google.com/)")
+                
             gemini_model = st.text_input("Gemini Model Name", value=config.get("gemini_model", "gemini-1.5-flash"))
-            groq_key = st.text_input("Groq API Key", value=config.get("groq_key", ""), type="password")
-            st.caption("Get a Groq API key from [Groq Console](https://console.groq.com/)")
+            
+            groq_placeholder = "Keep existing key (enter new key to overwrite, or 'CLEAR' to delete)" if config.get("groq_key") else "Enter Groq API Key"
+            groq_key_input = st.text_input("Groq API Key", value="", placeholder=groq_placeholder, type="password")
+            if config.get("groq_key"):
+                st.caption("✅ Groq API Key is configured")
+            else:
+                st.caption("❌ No Groq API Key configured. Get one from [Groq Console](https://console.groq.com/)")
             
             st.subheader("Local Model Config (Ollama)")
             ollama_host = st.text_input("Ollama Host URL", value=config.get("ollama_host", "http://localhost:11434"))
@@ -896,11 +907,27 @@ if page == "Settings":
             
         submitted = st.form_submit_button("Save Configuration")
         if submitted:
+            # Resolve Gemini key update
+            if gemini_key_input.strip() == "CLEAR":
+                resolved_gemini_key = ""
+            elif gemini_key_input.strip():
+                resolved_gemini_key = gemini_key_input.strip()
+            else:
+                resolved_gemini_key = config.get("gemini_key", "")
+                
+            # Resolve Groq key update
+            if groq_key_input.strip() == "CLEAR":
+                resolved_groq_key = ""
+            elif groq_key_input.strip():
+                resolved_groq_key = groq_key_input.strip()
+            else:
+                resolved_groq_key = config.get("groq_key", "")
+
             new_config = {
                 "mode": "Cloud" if mode == "Cloud" else "Local",
                 "cloud_provider": cloud_provider,
-                "gemini_key": gemini_key,
-                "groq_key": groq_key,
+                "gemini_key": resolved_gemini_key,
+                "groq_key": resolved_groq_key,
                 "gemini_model": gemini_model,
                 "ollama_host": ollama_host,
                 "ollama_model": ollama_model,
