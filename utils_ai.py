@@ -20,7 +20,7 @@ def extract_text_from_pdf(pdf_bytes):
     except Exception as e:
         return f"Error reading PDF file: {str(e)}"
 
-def query_gemini(prompt, api_key, image_bytes=None, model_name="gemini-flash-latest"):
+def query_gemini(prompt, api_key, image_bytes=None, model_name="gemini-1.5-flash"):
     """Send text/image request to Gemini model."""
     if not api_key:
         import os
@@ -28,11 +28,11 @@ def query_gemini(prompt, api_key, image_bytes=None, model_name="gemini-flash-lat
     if not api_key:
         return "Error: Gemini API Key is missing. Please set it in the Settings page."
         
-    model_name = model_name.strip()
+    model_name = model_name.strip() if model_name else "gemini-1.5-flash"
     
     # Try the user-specified model first, then modern standard models in fallback order
     models_to_try = [model_name]
-    fallback_models = ["gemini-2.0-flash", "gemini-2.5-flash", "gemini-1.5-flash", "gemini-2.5-pro", "gemini-1.5-pro", "gemini-flash-latest"]
+    fallback_models = ["gemini-1.5-flash", "gemini-2.0-flash", "gemini-2.5-flash", "gemini-1.5-pro", "gemini-2.5-pro"]
     
     for fm in fallback_models:
         if fm not in models_to_try:
@@ -59,21 +59,31 @@ def query_gemini(prompt, api_key, image_bytes=None, model_name="gemini-flash-lat
             error_str = str(e)
             last_error_msg = error_str
             
-            # Check for rate limits, quota limits, or model mismatch (so we try the next fallback)
-            is_rate_limit = "429" in error_str or "quota" in error_str.lower() or "limit" in error_str.lower()
-            is_not_found = "404" in error_str or "not found" in error_str.lower() or "not supported" in error_str.lower()
+            # Check for specific error categories
+            error_lower = error_str.lower()
+            is_api_key_error = "key" in error_lower or "api_key" in error_lower or "unauthorized" in error_lower or "api key not valid" in error_lower
+            is_rate_limit = "429" in error_str or "quota" in error_lower or "limit" in error_lower
+            is_model_error = (
+                "404" in error_str or 
+                "not found" in error_lower or 
+                "not supported" in error_lower or 
+                "unexpected model" in error_lower or 
+                "model name format" in error_lower or 
+                "400" in error_str
+            )
             
-            if is_rate_limit:
+            if is_api_key_error and not is_model_error:
+                # Fatal API key error - return immediately
+                return f"Gemini API Error: Invalid API Key. (Details: {error_str})"
+            elif is_rate_limit:
                 if not quota_error_msg:
                     quota_error_msg = error_str
-                print(f"Gemini Model {current_model} failed due to rate limit/quota. Retrying with next fallback...")
-                continue
-            elif is_not_found:
-                print(f"Gemini Model {current_model} is not found/supported. Retrying with next fallback...")
+                print(f"Gemini Model {current_model} failed due to rate limit/quota. Retrying next fallback...")
                 continue
             else:
-                # Other errors (e.g., API key invalid) are fatal and should be returned immediately
-                return f"Gemini API Error: {error_str}"
+                # Model mismatch, unexpected name format, or unsupported features - try next model
+                print(f"Gemini Model {current_model} failed ({error_str}). Retrying next fallback...")
+                continue
                 
     if quota_error_msg:
         return f"Gemini API Error: Quota exceeded (429) on your API key. Please check your billing or free tier limits in Google AI Studio. (Details: {quota_error_msg})"
@@ -174,7 +184,7 @@ def run_model_query(prompt, image_bytes=None, file_text=None, config=None):
     if mode == "Cloud":
         provider = config.get("cloud_provider", "Gemini")
         if provider == "Gemini":
-            gemini_model = config.get("gemini_model", "gemini-flash-latest")
+            gemini_model = config.get("gemini_model", "gemini-1.5-flash")
             return query_gemini(full_prompt, config.get("gemini_key"), image_bytes, model_name=gemini_model)
         else:
             return query_groq(full_prompt, config.get("groq_key"), image_bytes)
