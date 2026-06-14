@@ -14,10 +14,18 @@ from utils_voice import translate_text, transcribe_audio, text_to_speech_bytes, 
 CONFIG_FILE = ".krishimitra_config.json"
 
 import http.cookies
-from streamlit.web.server.websocket_headers import _get_websocket_headers
+try:
+    from streamlit.web.server.websocket_headers import _get_websocket_headers
+except ImportError:
+    try:
+        from streamlit.server.websocket_headers import _get_websocket_headers
+    except ImportError:
+        _get_websocket_headers = None
 
 def get_cookies():
     try:
+        if _get_websocket_headers is None:
+            return {}
         headers = _get_websocket_headers()
         if not headers:
             return {}
