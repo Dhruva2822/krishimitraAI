@@ -61,7 +61,14 @@ def query_gemini(prompt, api_key, image_bytes=None, model_name="gemini-1.5-flash
             
             # Check for specific error categories
             error_lower = error_str.lower()
-            is_api_key_error = "key" in error_lower or "api_key" in error_lower or "unauthorized" in error_lower or "api key not valid" in error_lower
+            is_api_key_error = (
+                "api key not valid" in error_lower or 
+                "api key expired" in error_lower or 
+                "invalid api key" in error_lower or 
+                "api_key_invalid" in error_lower or
+                "api key is invalid" in error_lower or
+                "key not found" in error_lower
+            )
             is_rate_limit = "429" in error_str or "quota" in error_lower or "limit" in error_lower
             is_model_error = (
                 "404" in error_str or 
@@ -72,7 +79,7 @@ def query_gemini(prompt, api_key, image_bytes=None, model_name="gemini-1.5-flash
                 "400" in error_str
             )
             
-            if is_api_key_error and not is_model_error:
+            if is_api_key_error and not is_rate_limit:
                 # Fatal API key error - return immediately
                 return f"Gemini API Error: Invalid API Key. (Details: {error_str})"
             elif is_rate_limit:
