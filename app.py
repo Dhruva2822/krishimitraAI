@@ -13,6 +13,22 @@ from utils_voice import translate_text, transcribe_audio, text_to_speech_bytes, 
 # Load persistent config
 CONFIG_FILE = ".krishimitra_config.json"
 
+import http.cookies
+from streamlit.web.server.websocket_headers import _get_websocket_headers
+
+def get_cookies():
+    try:
+        headers = _get_websocket_headers()
+        if not headers:
+            return {}
+        cookie_header = headers.get("Cookie", "")
+        cookie = http.cookies.SimpleCookie()
+        cookie.load(cookie_header)
+        return {k: v.value for k, v in cookie.items()}
+    except Exception as e:
+        print(f"Error reading cookies: {str(e)}")
+        return {}
+
 def load_config():
     default_config = {
         "mode": "Cloud",
@@ -34,7 +50,16 @@ def load_config():
         os.environ.get("STREAMLIT_SERVER_HEADLESS") == "true"
     )
     
-    if os.path.exists(CONFIG_FILE):
+    # Read cookies to see if user has previously used keys
+    cookies = get_cookies()
+    
+    # If cookies are present, they override defaults
+    for key in ["gemini_key", "groq_key", "mode", "cloud_provider", "language", "gemini_model", "ollama_host", "ollama_model"]:
+        if key in cookies and cookies[key] is not None:
+            default_config[key] = cookies[key]
+            
+    # Load from file if not deployed and no cookies are set
+    if not is_deployed and os.path.exists(CONFIG_FILE):
         try:
             with open(CONFIG_FILE, "r") as f:
                 saved = json.load(f)
@@ -44,15 +69,13 @@ def load_config():
                 if "openai_key" in saved:
                     saved["groq_key"] = saved.pop("openai_key")
                 
-                # If running on cloud/deployed server, strip existing key configuration 
-                # so users start with clean/empty fields and enter their own keys (BYOK)
-                if is_deployed:
-                    saved.pop("gemini_key", None)
-                    saved.pop("groq_key", None)
-                    
-                default_config.update(saved)
+                # Only load keys from file if not already set by cookies
+                for k, v in saved.items():
+                    if k not in cookies:
+                        default_config[k] = v
         except Exception:
             pass
+            
     return default_config
 
 def save_config(config):
@@ -878,6 +901,18 @@ if page == "Settings":
             st.session_state.config = new_config
             if not is_deployed:
                 save_config(new_config)
+                
+            # Set cookies on browser via a hidden image onerror injection to persist key (for old/returning users)
+            cookie_js = ""
+            for k, v in new_config.items():
+                safe_val = str(v).replace("'", "\\'")
+                if not safe_val:
+                    cookie_js += f"document.cookie = '{k}=;path=/;max-age=0;SameSite=Strict';"
+                else:
+                    cookie_js += f"document.cookie = '{k}={safe_val};path=/;max-age=31536000;SameSite=Strict';"
+            
+            st.markdown(f'<img src="x" onerror="{cookie_js}" style="display:none;">', unsafe_allow_html=True)
+            
             st.success("Settings saved successfully! Reloading variables...")
             st.rerun()
 
